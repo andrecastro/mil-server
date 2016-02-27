@@ -1,6 +1,7 @@
 package br.edu.ifce.ppd.tria.server.socket.model;
 
 import br.edu.ifce.ppd.tria.core.model.Client;
+import br.edu.ifce.ppd.tria.core.protocol.Action;
 import br.edu.ifce.ppd.tria.server.socket.SocketConnection;
 
 /**
@@ -15,7 +16,7 @@ public class SocketClient extends Client {
         this.connection = connection;
     }
 
-    public SocketConnection getConnection() {
-        return connection;
+    public void send(Action action) {
+        connection.send(action);
     }
 }

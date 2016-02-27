@@ -2,6 +2,7 @@ package br.edu.ifce.ppd.tria.server.socket;
 
 import br.edu.ifce.ppd.tria.core.model.Client;
 import br.edu.ifce.ppd.tria.core.protocol.Action;
+import br.edu.ifce.ppd.tria.server.socket.config.RouteExecutor;
 import br.edu.ifce.ppd.tria.server.socket.service.SocketChatService;
 import br.edu.ifce.ppd.tria.server.socket.service.SocketGameService;
 import br.edu.ifce.ppd.tria.server.socket.model.SocketClient;
@@ -18,25 +19,20 @@ public class Route {
     private SocketGameService gameService;
     private SocketRegisterService registerService;
 
+    private HashMap<String, RouteExecutor> configuredRoutes;
+
     public Route(SocketRegisterService registerService,
                  SocketGameService gameService, SocketChatService chatService) {
         this.registerService = registerService;
         this.gameService = gameService;
         this.chatService = chatService;
+        this.configuredRoutes = new HashMap<>();
+        this.configure();
     }
 
     public Action to(Action action, SocketClient client) {
-        String[] paths = action.getPath().split("/");
-        HashMap body = action.getBody();
-
-        switch (paths[0]) {
-            case "game-service":
-                return handleGameService(paths[1], body, client);
-            case "chat-service":
-                return handleChatService(paths[1], body, client);
-            default:
-                return new Action(null, null); //TODO create better error
-        }
+        RouteExecutor executor = configuredRoutes.get(action.getPath());
+        return executor.execute(client, action.getBody());
     }
 
     public void toDeregister(Client client) {
@@ -47,25 +43,31 @@ public class Route {
         return registerService.register(connection);
     }
 
-    private Action handleChatService(String path, HashMap body, SocketClient client) {
-        switch (path) {
-            case "send-message":
-                return chatService.sendMessage(client, (String) body.get("message"));
-            default:
-                return new Action(null, null); // TODO create better error
-        }
+    private void configure() {
+        addRoute("game-service/idle-games", (client, body) ->  {
+            return gameService.retrieveIdleGames();
+        });
+
+        addRoute("game-service/create-game", (client, body) ->  {
+            return gameService.createGame(client, (String) body.get("game-alias"), (String) body.get("player-name"));
+        });
+
+        addRoute("game-service/enter-games", (client, body)-> {
+            return  gameService.enterGame(client, (String) body.get("game-id"), (String) body.get("player-name"));
+        });
+
+        addRoute("game-service/put-piece-in-spot", (client, body)-> {
+            String gameId = (String) body.get("game-id");
+            Integer selectedSpotId = (Integer) body.get("selected-spot-id");
+            return  gameService.putPieceInSpot(client, gameId, selectedSpotId);
+        });
+
+        addRoute("chat-service/send-message", (client, body) -> {
+            return chatService.sendMessage(client, (String) body.get("message"));
+        });
     }
 
-    private Action handleGameService(String path, HashMap body, SocketClient client) {
-        switch (path) {
-            case "idle-games":
-                return gameService.retrieveIdleGames();
-            case "create-game":
-                return gameService.createGame(client,(String) body.get("game-alias") ,(String) body.get("player-name"));
-            case "enter-game":
-                return gameService.enterGame(client, (String) body.get("game-id"), (String) body.get("player-name"));
-            default:
-                return new Action(null, null); // TODO create better error
-        }
+    private void addRoute(String path, RouteExecutor executor) {
+        this.configuredRoutes.put(path, executor);
     }
 }

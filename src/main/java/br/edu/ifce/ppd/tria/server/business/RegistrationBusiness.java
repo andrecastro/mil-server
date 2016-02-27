@@ -42,5 +42,9 @@ public class RegistrationBusiness {
         return games.remove(game.getId());
     }
 
+    public Client getClientFromRepository(Client client) {
+        return clients.findById(client.getId());
+    }
+
 
 }

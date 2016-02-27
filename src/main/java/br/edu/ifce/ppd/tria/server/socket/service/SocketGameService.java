@@ -3,15 +3,12 @@ package br.edu.ifce.ppd.tria.server.socket.service;
 import br.edu.ifce.ppd.tria.core.model.Client;
 import br.edu.ifce.ppd.tria.core.model.Game;
 import br.edu.ifce.ppd.tria.core.protocol.Action;
-import br.edu.ifce.ppd.tria.core.protocol.helper.ActionBuilder;
 import br.edu.ifce.ppd.tria.core.service.GameService;
 import br.edu.ifce.ppd.tria.server.business.GameBusiness;
 import br.edu.ifce.ppd.tria.server.socket.model.SocketClient;
-
-import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 
+import static br.edu.ifce.ppd.tria.core.model.GameStatus.REMOVING_PIECE;
 import static br.edu.ifce.ppd.tria.core.protocol.helper.ActionBuilder.anAction;
 
 /**
@@ -51,11 +48,41 @@ public class SocketGameService implements GameService {
                 .build();
 
         SocketClient socketClient = (SocketClient) gameBusiness.getClientOf(game.getFirstPlayer());
-        socketClient.getConnection().send(notifyEnterGame);
+        socketClient.send(notifyEnterGame);
 
         return anAction()
                 .to("game-service/enter-game")
                 .withParamValue("game", game)
+                .build();
+    }
+
+    @Override
+    public Action putPieceInSpot(Client currentClient, String gameId, Integer selectedSpotId) {
+        Game game = gameBusiness.putPieceInSpot(currentClient, gameId, selectedSpotId);
+
+        Boolean switchTheTurn = true;
+        Boolean canRemovePiece = false;
+
+        if (gameBusiness.hasCompletedMil(currentClient, game, selectedSpotId)) {
+            switchTheTurn = false;
+            canRemovePiece = true;
+            gameBusiness.changeGameStatusTo(REMOVING_PIECE, game);
+        }
+
+        Action notifyPutPiece = anAction()
+                .to("game-service/notify-put-piece")
+                .withParamValue("game", game)
+                .withParamValue("your-turn", switchTheTurn)
+                .build();
+
+        Client opponentClient = game.getOpponentClientOf(currentClient);
+        SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+        socketOpponentClient.send(notifyPutPiece);
+
+        return anAction()
+                .to("game-service/put-piece")
+                .withParamValue("game", game)
+                .withParamValue("can-remove-piece", canRemovePiece)
                 .build();
     }
 }
