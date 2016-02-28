@@ -52,7 +52,7 @@ public class Route {
             return gameService.createGame(client, (String) body.get("game-alias"), (String) body.get("player-name"));
         });
 
-        addRoute("game-service/enter-games", (client, body)-> {
+        addRoute("game-service/enter-game", (client, body)-> {
             return  gameService.enterGame(client, (String) body.get("game-id"), (String) body.get("player-name"));
         });
 
@@ -60,6 +60,12 @@ public class Route {
             String gameId = (String) body.get("game-id");
             Integer selectedSpotId = (Integer) body.get("selected-spot-id");
             return  gameService.putPieceInSpot(client, gameId, selectedSpotId);
+        });
+
+        addRoute("game-service/remove-piece", (client, body)-> {
+            String gameId = (String) body.get("game-id");
+            Integer selectedSpotId = (Integer) body.get("selected-spot-id");
+            return  gameService.removePiece(client, gameId, selectedSpotId);
         });
 
         addRoute("chat-service/send-message", (client, body) -> {

@@ -100,8 +100,9 @@ public class SocketConnection implements Connection {
 
                 System.out.println("Responding: " + response);
 
-                outputStream.writeObject(response);
+                outputStream.writeUnshared(response);
                 outputStream.reset();
+                outputStream.flush();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -110,7 +111,7 @@ public class SocketConnection implements Connection {
 
     private void handleRead() {
         try {
-            Action requestAction = (Action) inputStream.readObject();
+            Action requestAction = (Action) inputStream.readUnshared();
 
             System.out.println("Handling request: " + requestAction);
 

@@ -6,8 +6,11 @@ import br.edu.ifce.ppd.tria.core.protocol.Action;
 import br.edu.ifce.ppd.tria.core.service.GameService;
 import br.edu.ifce.ppd.tria.server.business.GameBusiness;
 import br.edu.ifce.ppd.tria.server.socket.model.SocketClient;
+
 import java.util.ArrayList;
 
+import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLACING_OF_PIECE;
+import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLAYING;
 import static br.edu.ifce.ppd.tria.core.model.GameStatus.REMOVING_PIECE;
 import static br.edu.ifce.ppd.tria.core.protocol.helper.ActionBuilder.anAction;
 
@@ -56,12 +59,18 @@ public class SocketGameService implements GameService {
                 .build();
     }
 
+
+
     @Override
     public Action putPieceInSpot(Client currentClient, String gameId, Integer selectedSpotId) {
         Game game = gameBusiness.putPieceInSpot(currentClient, gameId, selectedSpotId);
 
         Boolean switchTheTurn = true;
         Boolean canRemovePiece = false;
+
+        if (gameBusiness.hasPlacedAllPieces(game)) {
+            gameBusiness.changeGameStatusTo(PLAYING, game);
+        }
 
         if (gameBusiness.hasCompletedMil(currentClient, game, selectedSpotId)) {
             switchTheTurn = false;
@@ -83,6 +92,34 @@ public class SocketGameService implements GameService {
                 .to("game-service/put-piece")
                 .withParamValue("game", game)
                 .withParamValue("can-remove-piece", canRemovePiece)
+                .build();
+    }
+
+    @Override
+    public Action removePiece(Client client, String gameId, Integer selectedSpotId) {
+        Game game = gameBusiness.removePiece(client, gameId, selectedSpotId);
+        gameBusiness.changeGameStatusTo(PLACING_OF_PIECE, game);
+
+        if (gameBusiness.isGameOver(client, game)) {
+            // TODO handle game over
+        }
+
+        if (gameBusiness.hasPlacedAllPieces(game)) {
+            gameBusiness.changeGameStatusTo(PLAYING, game);
+        }
+
+        Action notifyRemovePiece = anAction()
+                .to("game-service/notify-remove-piece")
+                .withParamValue("game", game)
+                .build();
+
+        Client opponentClient = game.getOpponentClientOf(client);
+        SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+        socketOpponentClient.send(notifyRemovePiece);
+
+        return anAction()
+                .to("game-service/remove-piece")
+                .withParamValue("game", game)
                 .build();
     }
 }

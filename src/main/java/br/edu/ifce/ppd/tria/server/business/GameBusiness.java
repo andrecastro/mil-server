@@ -13,6 +13,7 @@ import java.util.UUID;
 import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLACING_OF_PIECE;
 import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.FIRST_PLAYER;
 import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.SECOND_PLAYER;
+import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.NO_ONE;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.PLAYER_ONE;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.PLAYER_TWO;
 
@@ -65,7 +66,21 @@ public class GameBusiness implements RemoteGameService {
             game.getSecondPlayer().increaseNumberOfPiecesPlaced();
         }
 
-        return game;
+        return games.update(game);
+    }
+
+    public Game removePiece(Client client, String gameId, Integer selectedSpotId) {
+        Game game = games.findById(gameId);
+        Spot spot = game.getBoard().get(selectedSpotId);
+        spot.occupiedBy(NO_ONE);
+
+        if (game.isFirstPlayer(client)) {
+            game.getSecondPlayer().decreaseNumberOfPieces();
+        } else {
+            game.getFirstPlayer().decreaseNumberOfPieces();
+        }
+
+        return games.update(game);
     }
 
     public boolean hasCompletedMil(Client client, Game game, Integer spotId) {
@@ -93,5 +108,14 @@ public class GameBusiness implements RemoteGameService {
 
     private Player createPlayer(String name, PlayerSelection selection, Client client) {
         return new Player(new Client(client.getId()), name, selection);
+    }
+
+    public boolean hasPlacedAllPieces(Game game) {
+        return game.getFirstPlayer().getNumberOfPiecesPlaced().equals(9)
+                && game.getSecondPlayer().getNumberOfPiecesPlaced().equals(9);
+    }
+
+    public boolean isGameOver(Client client, Game game) {
+        return false;
     }
 }

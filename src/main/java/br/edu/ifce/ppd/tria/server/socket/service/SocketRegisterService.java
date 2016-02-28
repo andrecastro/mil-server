@@ -36,6 +36,9 @@ public class SocketRegisterService implements RegisterService{
         if (closedGame == null)
             return; // do nothing
 
+        if (closedGame.isFirstPlayer(client) && closedGame.getSecondPlayer() == null)
+            return; // do nothing
+
         SocketClient socketClient;
 
         if (closedGame.isFirstPlayer(client)) {

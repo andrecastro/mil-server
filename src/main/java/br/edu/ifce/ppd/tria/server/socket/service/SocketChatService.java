@@ -50,7 +50,7 @@ public class SocketChatService implements ChatService {
             socketClient = (SocketClient) clients.findById(game.getFirstPlayer().getClient().getId());
         }
 
-        socketClient.getConnection().send(notifySendMessage.build());
+        socketClient.send(notifySendMessage.build());
 
         return anAction()
                 .to("chat-service/send-message")
