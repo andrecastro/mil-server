@@ -98,14 +98,27 @@ public class SocketGameService implements GameService {
     @Override
     public Action removePiece(Client client, String gameId, Integer selectedSpotId) {
         Game game = gameBusiness.removePiece(client, gameId, selectedSpotId);
-        gameBusiness.changeGameStatusTo(PLACING_OF_PIECE, game);
+        gameBusiness.changeGameStatusTo(PLAYING, game);
 
         if (gameBusiness.isGameOver(client, game)) {
-            // TODO handle game over
+
+            gameBusiness.finishGame(game);
+
+            Action notifyRemovePiece = anAction()
+                    .to("game-service/lost-game")
+                    .build();
+
+            Client opponentClient = game.getOpponentClientOf(client);
+            SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+            socketOpponentClient.send(notifyRemovePiece);
+
+            return anAction()
+                    .to("game-service/won-game")
+                    .build();
         }
 
-        if (gameBusiness.hasPlacedAllPieces(game)) {
-            gameBusiness.changeGameStatusTo(PLAYING, game);
+        if (!gameBusiness.hasPlacedAllPieces(game)) {
+            gameBusiness.changeGameStatusTo(PLACING_OF_PIECE, game);
         }
 
         Action notifyRemovePiece = anAction()
@@ -121,5 +134,85 @@ public class SocketGameService implements GameService {
                 .to("game-service/remove-piece")
                 .withParamValue("game", game)
                 .build();
+    }
+
+    @Override
+    public Action movePiece(Client client, String gameId, Integer fromSpotId, Integer toSpotId) {
+        Game game = gameBusiness.movePiece(gameId, fromSpotId, toSpotId);
+
+        Boolean switchTheTurn = true;
+        Boolean canRemovePiece = false;
+
+        if (gameBusiness.hasCompletedMil(client, game, toSpotId)) {
+            switchTheTurn = false;
+            canRemovePiece = true;
+            gameBusiness.changeGameStatusTo(REMOVING_PIECE, game);
+        }
+
+        Action notifyPutPiece = anAction()
+                .to("game-service/notify-move-piece")
+                .withParamValue("game", game)
+                .withParamValue("your-turn", switchTheTurn)
+                .build();
+
+        Client opponentClient = game.getOpponentClientOf(client);
+        SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+        socketOpponentClient.send(notifyPutPiece);
+
+        return anAction()
+                .to("game-service/move-piece")
+                .withParamValue("game", game)
+                .withParamValue("can-remove-piece", canRemovePiece)
+                .build();
+    }
+
+    @Override
+    public Action giveUp(Client client) {
+        Game game = gameBusiness.giveUp(client);
+
+        Action notifyGiveUp = anAction()
+                .to("game-service/notify-give-up")
+                .build();
+
+        if (game.isSecondPlayer(client)) {
+            SocketClient socketClient = (SocketClient) gameBusiness.getClientOf(game.getFirstPlayer());
+            socketClient.send(notifyGiveUp);
+        } else if (game.getSecondPlayer() != null) {
+            SocketClient socketClient = (SocketClient) gameBusiness.getClientOf(game.getSecondPlayer());
+            socketClient.send(notifyGiveUp);
+        }
+
+        return anAction().to("game-service/give-up").build();
+    }
+
+    @Override
+    public Action askToRestartGame(Client client, String gameId) {
+        Game game = gameBusiness.getGame(gameId);
+
+        Action notifyAskToRestart = anAction()
+                .to("game-service/notify-ask-to-restart")
+                .build();
+
+        Client opponentClient = game.getOpponentClientOf(client);
+        SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+        socketOpponentClient.send(notifyAskToRestart);
+
+        return anAction().to("game-service/ask-to-restart").build();
+    }
+
+    @Override
+    public Action restartGame(Client client, String gameId) {
+        Game game = gameBusiness.restartGame(gameId);
+
+        Action notifyRestartGame = anAction()
+                .to("game-service/notify-restart-game")
+                .withParamValue("game", game)
+                .build();
+
+        Client opponentClient = game.getOpponentClientOf(client);
+        SocketClient socketOpponentClient = (SocketClient) gameBusiness.getFromRepository(opponentClient);
+        socketOpponentClient.send(notifyRestartGame);
+
+        return notifyRestartGame;
     }
 }

@@ -68,6 +68,25 @@ public class Route {
             return  gameService.removePiece(client, gameId, selectedSpotId);
         });
 
+        addRoute("game-service/move-piece", (client, body)-> {
+            String gameId = (String) body.get("game-id");
+            Integer fromSpotId = (Integer) body.get("from-spot-id");
+            Integer toSpotId = (Integer) body.get("to-spot-id");
+            return  gameService.movePiece(client, gameId, fromSpotId, toSpotId);
+        });
+
+        addRoute("game-service/give-up", (client, body)-> {
+            return  gameService.giveUp(client);
+        });
+
+        addRoute("game-service/ask-to-restart", (client, body)-> {
+            return  gameService.askToRestartGame(client, (String) body.get("game-id"));
+        });
+
+        addRoute("game-service/restart-game", (client, body)-> {
+            return  gameService.restartGame(client, (String) body.get("game-id"));
+        });
+
         addRoute("chat-service/send-message", (client, body) -> {
             return chatService.sendMessage(client, (String) body.get("message"));
         });

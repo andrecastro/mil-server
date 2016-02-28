@@ -16,6 +16,7 @@ import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.SECOND_PLAYER;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.NO_ONE;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.PLAYER_ONE;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.PLAYER_TWO;
+import static br.edu.ifce.ppd.tria.server.business.builder.BoardBuilder.buildNewBoard;
 
 
 /**
@@ -37,7 +38,7 @@ public class GameBusiness implements RemoteGameService {
 
     public Game createGame(Client client, String alias, String firstPlayerName) {
         Game game = new Game(alias, createPlayer(firstPlayerName, FIRST_PLAYER, client));
-        game.setBoard(BoardBuilder.buildNewBoard());
+        game.setBoard(buildNewBoard());
         return games.create(game);
     }
 
@@ -83,6 +84,24 @@ public class GameBusiness implements RemoteGameService {
         return games.update(game);
     }
 
+    public Game movePiece(String gameId, Integer fromSpotId, Integer toSpotId) {
+        Game game = games.findById(gameId);
+
+        Spot spotFrom = game.getBoard().get(fromSpotId);
+        Spot spotTo = game.getBoard().get(toSpotId);
+
+        spotTo.occupiedBy(spotFrom.getOccupiedBy());
+        spotFrom.occupiedBy(NO_ONE);
+
+        return games.update(game);
+    }
+
+    public Game giveUp(Client client) {
+        Game game = games.findBy(client);
+        games.remove(game.getId());
+        return game;
+    }
+
     public boolean hasCompletedMil(Client client, Game game, Integer spotId) {
         Spot spot = game.getBoard().get(spotId);
 
@@ -116,6 +135,31 @@ public class GameBusiness implements RemoteGameService {
     }
 
     public boolean isGameOver(Client client, Game game) {
-        return false;
+        if (game.isFirstPlayer(client)) {
+            return game.getSecondPlayer().getNumberOfPieces().equals(2);
+        } else {
+            return game.getFirstPlayer().getNumberOfPieces().equals(2);
+        }
     }
+
+
+    public void finishGame(Game game) {
+        games.remove(game.getId());
+    }
+
+    public Game getGame(String gameId) {
+        return games.findById(gameId);
+    }
+
+    public Game restartGame(String gameId) {
+        Game game = games.findById(gameId);
+
+        game.setStatus(PLACING_OF_PIECE);
+        game.setBoard(buildNewBoard());
+        game.getFirstPlayer().resetPieces();
+        game.getSecondPlayer().resetPieces();
+
+        return games.update(game);
+    }
+
 }
