@@ -102,6 +102,17 @@ public class GameBusiness implements RemoteGameService {
         return game;
     }
 
+    public Game restartGame(String gameId) {
+        Game game = games.findById(gameId);
+
+        game.setStatus(PLACING_OF_PIECE);
+        game.setBoard(buildNewBoard());
+        game.getFirstPlayer().resetPieces();
+        game.getSecondPlayer().resetPieces();
+
+        return games.update(game);
+    }
+
     public boolean hasCompletedMil(Client client, Game game, Integer spotId) {
         Spot spot = game.getBoard().get(spotId);
 
@@ -125,10 +136,6 @@ public class GameBusiness implements RemoteGameService {
         return clients.findById(client.getId());
     }
 
-    private Player createPlayer(String name, PlayerSelection selection, Client client) {
-        return new Player(new Client(client.getId()), name, selection);
-    }
-
     public boolean hasPlacedAllPieces(Game game) {
         return game.getFirstPlayer().getNumberOfPiecesPlaced().equals(9)
                 && game.getSecondPlayer().getNumberOfPiecesPlaced().equals(9);
@@ -142,7 +149,6 @@ public class GameBusiness implements RemoteGameService {
         }
     }
 
-
     public void finishGame(Game game) {
         games.remove(game.getId());
     }
@@ -151,15 +157,7 @@ public class GameBusiness implements RemoteGameService {
         return games.findById(gameId);
     }
 
-    public Game restartGame(String gameId) {
-        Game game = games.findById(gameId);
-
-        game.setStatus(PLACING_OF_PIECE);
-        game.setBoard(buildNewBoard());
-        game.getFirstPlayer().resetPieces();
-        game.getSecondPlayer().resetPieces();
-
-        return games.update(game);
+    private Player createPlayer(String name, PlayerSelection selection, Client client) {
+        return new Player(new Client(client.getId()), name, selection);
     }
-
 }
