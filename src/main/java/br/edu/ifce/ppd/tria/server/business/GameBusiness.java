@@ -1,14 +1,10 @@
 package br.edu.ifce.ppd.tria.server.business;
 
 import br.edu.ifce.ppd.tria.core.model.*;
-import br.edu.ifce.ppd.tria.core.service.RemoteGameService;
-import br.edu.ifce.ppd.tria.server.business.builder.BoardBuilder;
 import br.edu.ifce.ppd.tria.server.repositroy.ClientRepository;
 import br.edu.ifce.ppd.tria.server.repositroy.GameRepository;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 
 import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLACING_OF_PIECE;
 import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.FIRST_PLAYER;
@@ -22,7 +18,7 @@ import static br.edu.ifce.ppd.tria.server.business.builder.BoardBuilder.buildNew
 /**
  * Created by andrecoelho on 2/16/16.
  */
-public class GameBusiness implements RemoteGameService {
+public class GameBusiness {
 
     private GameRepository games;
     private ClientRepository clients;
