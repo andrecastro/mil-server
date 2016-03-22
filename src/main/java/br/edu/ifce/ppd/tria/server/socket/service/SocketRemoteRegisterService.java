@@ -9,6 +9,7 @@ import br.edu.ifce.ppd.tria.server.business.RegistrationBusiness;
 import br.edu.ifce.ppd.tria.server.socket.SocketConnection;
 import br.edu.ifce.ppd.tria.server.socket.model.SocketClient;
 
+import java.rmi.RemoteException;
 import java.util.UUID;
 
 import static br.edu.ifce.ppd.tria.core.protocol.helper.ActionBuilder.anAction;
@@ -16,17 +17,22 @@ import static br.edu.ifce.ppd.tria.core.protocol.helper.ActionBuilder.anAction;
 /**
  * Created by andrecoelho on 2/19/16.
  */
-public class SocketRegisterService implements RegisterService{
+public class SocketRemoteRegisterService implements RegisterService{
 
     private RegistrationBusiness registrationBusiness;
 
-    public SocketRegisterService(RegistrationBusiness registrationBusiness) {
+    public SocketRemoteRegisterService(RegistrationBusiness registrationBusiness) {
         this.registrationBusiness = registrationBusiness;
     }
 
     @Override
-    public Client register() {
+    public Client createClient() {
         return new Client(UUID.randomUUID().toString());
+    }
+
+    @Override
+    public Client register(Client client) {
+        return registrationBusiness.register(client);
     }
 
     @Override
@@ -39,25 +45,20 @@ public class SocketRegisterService implements RegisterService{
         if (closedGame.isFirstPlayer(client) && closedGame.getSecondPlayer() == null)
             return; // do nothing
 
-        SocketClient socketClient;
+        SocketClient opponentClient;
 
         if (closedGame.isFirstPlayer(client)) {
             Client secondPlayerClient = closedGame.getSecondPlayer().getClient();
-            socketClient = (SocketClient) registrationBusiness.getClientFromRepository(secondPlayerClient);
+            opponentClient = (SocketClient) registrationBusiness.getClientFromRepository(secondPlayerClient);
         } else {
             Client firstPlayerClient = closedGame.getFirstPlayer().getClient();
-            socketClient = (SocketClient) registrationBusiness.getClientFromRepository(firstPlayerClient);
+            opponentClient = (SocketClient) registrationBusiness.getClientFromRepository(firstPlayerClient);
         }
 
         Action notifyClose = anAction()
                 .to("register-service/notify-close-game").build();
 
-        socketClient.send(notifyClose);
+        opponentClient.send(notifyClose);
     }
-
-    public SocketClient register(SocketConnection connection) {
-        return (SocketClient) registrationBusiness.register(new SocketClient(connection, register()));
-    }
-
 
 }

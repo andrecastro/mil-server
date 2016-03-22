@@ -8,12 +8,13 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.rmi.RemoteException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by andrecoelho on 2/17/16.
  */
-public class SocketConnection implements Connection {
+public class SocketConnection {
 
     private volatile boolean connected;
 
@@ -39,7 +40,6 @@ public class SocketConnection implements Connection {
         this.outputStream = new ObjectOutputStream(socket.getOutputStream());
     }
 
-    @Override
     public void start() {
         registerClient();
         startReading();

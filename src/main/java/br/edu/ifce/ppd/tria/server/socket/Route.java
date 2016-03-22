@@ -3,10 +3,10 @@ package br.edu.ifce.ppd.tria.server.socket;
 import br.edu.ifce.ppd.tria.core.model.Client;
 import br.edu.ifce.ppd.tria.core.protocol.Action;
 import br.edu.ifce.ppd.tria.server.socket.config.RouteExecutor;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketChatService;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketGameService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteChatService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteGameService;
 import br.edu.ifce.ppd.tria.server.socket.model.SocketClient;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketRegisterService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteRegisterService;
 
 import java.util.HashMap;
 
@@ -15,14 +15,14 @@ import java.util.HashMap;
  */
 public class Route {
 
-    private SocketChatService chatService;
-    private SocketGameService gameService;
-    private SocketRegisterService registerService;
+    private SocketRemoteChatService chatService;
+    private SocketRemoteGameService gameService;
+    private SocketRemoteRegisterService registerService;
 
     private HashMap<String, RouteExecutor> configuredRoutes;
 
-    public Route(SocketRegisterService registerService,
-                 SocketGameService gameService, SocketChatService chatService) {
+    public Route(SocketRemoteRegisterService registerService,
+                 SocketRemoteGameService gameService, SocketRemoteChatService chatService) {
         this.registerService = registerService;
         this.gameService = gameService;
         this.chatService = chatService;
@@ -40,7 +40,7 @@ public class Route {
     }
 
     public SocketClient toRegistration(SocketConnection connection) {
-        return registerService.register(connection);
+        return (SocketClient) registerService.register(new SocketClient(connection, registerService.createClient()));
     }
 
     private void configure() {

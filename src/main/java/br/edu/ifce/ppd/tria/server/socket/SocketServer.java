@@ -6,9 +6,9 @@ import br.edu.ifce.ppd.tria.core.service.ChatService;
 import br.edu.ifce.ppd.tria.core.service.GameService;
 import br.edu.ifce.ppd.tria.core.service.RegisterService;
 import br.edu.ifce.ppd.tria.server.Server;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketChatService;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketGameService;
-import br.edu.ifce.ppd.tria.server.socket.service.SocketRegisterService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteChatService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteGameService;
+import br.edu.ifce.ppd.tria.server.socket.service.SocketRemoteRegisterService;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -25,8 +25,8 @@ public class SocketServer implements Server {
 
     public SocketServer(RegisterService registerService, GameService gameService, ChatService chatService) throws IOException {
         this.serverSocket = new ServerSocket(8088);
-        this.route = new Route((SocketRegisterService)registerService,
-                (SocketGameService)gameService, (SocketChatService) chatService);
+        this.route = new Route((SocketRemoteRegisterService)registerService,
+                (SocketRemoteGameService)gameService, (SocketRemoteChatService) chatService);
     }
 
     private SocketConnection listenConnection() throws IOException {
@@ -34,21 +34,18 @@ public class SocketServer implements Server {
     }
 
     @Override
-    public void start() {
+    public void start() throws IOException {
+        System.out.println("Server initiating for socket...");
         System.out.println("Server started at port " + 8088 + "...");
 
         while (true) {
-            try {
-                SocketConnection connection = listenConnection();
-                connection.start();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            SocketConnection connection = listenConnection();
+            connection.start();
         }
     }
 
     private Action notifyAction(Client client) {
-        HashMap<String, Serializable> body = new HashMap();
+        HashMap<String, Serializable> body = new HashMap<>();
         body.put("newClient", client);
         return new Action("connected", body);
     }

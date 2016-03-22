@@ -5,8 +5,11 @@ import br.edu.ifce.ppd.tria.server.repositroy.ClientRepository;
 import br.edu.ifce.ppd.tria.server.repositroy.GameRepository;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLACING_OF_PIECE;
+import static br.edu.ifce.ppd.tria.core.model.GameStatus.PLAYING;
+import static br.edu.ifce.ppd.tria.core.model.GameStatus.REMOVING_PIECE;
 import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.FIRST_PLAYER;
 import static br.edu.ifce.ppd.tria.core.model.PlayerSelection.SECOND_PLAYER;
 import static br.edu.ifce.ppd.tria.core.model.SpotOccupiedBy.NO_ONE;
@@ -63,6 +66,19 @@ public class GameBusiness {
             game.getSecondPlayer().increaseNumberOfPiecesPlaced();
         }
 
+        game.setSwitchTurn(true);
+        game.setCanRemovePiece(false);
+
+        if (hasPlacedAllPieces(game)) {
+            game.setStatus(PLAYING);
+        }
+
+        if (hasCompletedMil(client, game, selectedSpotId)) {
+            game.setSwitchTurn(false);
+            game.setCanRemovePiece(true);
+            game.setStatus(REMOVING_PIECE);
+        }
+
         return games.update(game);
     }
 
@@ -77,10 +93,16 @@ public class GameBusiness {
             game.getFirstPlayer().decreaseNumberOfPieces();
         }
 
+        game.setStatus(PLAYING);
+
+        if (!hasPlacedAllPieces(game)) {
+            game.setStatus(PLACING_OF_PIECE);
+        }
+
         return games.update(game);
     }
 
-    public Game movePiece(String gameId, Integer fromSpotId, Integer toSpotId) {
+    public Game movePiece(String gameId, Client client, Integer fromSpotId, Integer toSpotId) {
         Game game = games.findById(gameId);
 
         Spot spotFrom = game.getBoard().get(fromSpotId);
@@ -88,6 +110,19 @@ public class GameBusiness {
 
         spotTo.occupiedBy(spotFrom.getOccupiedBy());
         spotFrom.occupiedBy(NO_ONE);
+
+        game.setSwitchTurn(true);
+        game.setCanRemovePiece(false);
+
+        if (hasPlacedAllPieces(game)) {
+            game.setStatus(PLAYING);
+        }
+
+        if (hasCompletedMil(client, game, toSpotId)) {
+            game.setSwitchTurn(false);
+            game.setCanRemovePiece(true);
+            game.setStatus(REMOVING_PIECE);
+        }
 
         return games.update(game);
     }
@@ -119,11 +154,6 @@ public class GameBusiness {
         return spot.getMilsBelongsTo().stream().anyMatch(m -> m.isCompletelyOccupiedBy(SECOND_PLAYER));
     }
 
-    public void changeGameStatusTo(GameStatus newState, Game game) {
-        game.setStatus(newState);
-        games.update(game);
-    }
-
     public Client getClientOf(Player player) {
         return clients.findById(player.getClient().getId());
     }
@@ -138,11 +168,20 @@ public class GameBusiness {
     }
 
     public boolean isGameOver(Client client, Game game) {
+        boolean opponentHasTwoPieces;
+//        boolean opponentIsStuck = false;
+        // TODO implementation to see if the opponent is stuck
         if (game.isFirstPlayer(client)) {
-            return game.getSecondPlayer().getNumberOfPieces().equals(2);
+            opponentHasTwoPieces = game.getSecondPlayer().getNumberOfPieces().equals(2);
+//            opponentIsStuck = game.getBoard()
+//                    .values().stream().filter(s -> s.isOccupiedByPlayerTwo()).allMatch(isStuck);
         } else {
-            return game.getFirstPlayer().getNumberOfPieces().equals(2);
+            opponentHasTwoPieces = game.getFirstPlayer().getNumberOfPieces().equals(2);
+//            opponentIsStuck = game.getBoard()
+//                    .values().stream().filter(s->s.isOccupiedByPlayerOne()).allMatch(isStuck);
         }
+
+        return game.getStatus().equals(PLAYING) && (opponentHasTwoPieces);
     }
 
     public void finishGame(Game game) {
@@ -151,6 +190,10 @@ public class GameBusiness {
 
     public Game getGame(String gameId) {
         return games.findById(gameId);
+    }
+
+    public Game getGameOf(Client client) {
+        return games.findBy(client);
     }
 
     private Player createPlayer(String name, PlayerSelection selection, Client client) {
